@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VAO CRM | Gestión de Consultas</title>
+  <meta name="description" content="CRM interno para gestionar consultas, contactos y seguimiento comercial de VAO Consultoría.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#dashboard" aria-label="VAO CRM">
+      <span class="brand-mark">V</span>
+      <span>
+        <strong>VAO CRM</strong>
+        <small>Consultas y seguimiento</small>
+      </span>
+    </a>
+
+    <nav class="nav">
+      <a class="nav-link active" href="#dashboard" data-view="dashboard">Panel</a>
+      <a class="nav-link" href="#contacts" data-view="contacts">Contactos</a>
+      <a class="nav-link" href="#new-contact" data-view="new-contact">Nueva consulta</a>
+    </nav>
+
+    <div class="sidebar-note">
+      <strong>Versión inicial</strong>
+      <span>Los datos se guardan en este navegador. Luego lo conectamos a Supabase.</span>
+    </div>
+  </aside>
+
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">CRM interno</p>
+        <h1 id="view-title">Panel comercial</h1>
+      </div>
+      <button class="primary-button" id="open-new-contact" type="button">Nueva consulta</button>
+    </header>
+
+    <section class="view active" id="dashboard-view">
+      <div class="metrics">
+        <article class="metric">
+          <span>Total contactos</span>
+          <strong id="metric-total">0</strong>
+        </article>
+        <article class="metric">
+          <span>Nuevos</span>
+          <strong id="metric-new">0</strong>
+        </article>
+        <article class="metric">
+          <span>En seguimiento</span>
+          <strong id="metric-follow">0</strong>
+        </article>
+        <article class="metric">
+          <span>Cerrados</span>
+          <strong id="metric-closed">0</strong>
+        </article>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Últimas consultas</h2>
+            <p>Ordenadas por fecha de creación.</p>
+          </div>
+          <button class="ghost-button" id="seed-demo" type="button">Cargar ejemplo</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th>Origen</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="recent-list"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="view" id="contacts-view">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Contactos</h2>
+            <p>Buscá por nombre, email, empresa, teléfono o mensaje.</p>
+          </div>
+          <div class="filters">
+            <input id="search" type="search" placeholder="Buscar contacto">
+            <select id="status-filter" aria-label="Filtrar por estado">
+              <option value="todos">Todos</option>
+              <option value="nuevo">Nuevo</option>
+              <option value="contactado">Contactado</option>
+              <option value="seguimiento">En seguimiento</option>
+              <option value="presupuesto">Presupuesto</option>
+              <option value="cerrado">Cerrado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="contacts-layout">
+          <div class="contact-list" id="contact-list"></div>
+          <article class="contact-detail" id="contact-detail">
+            <div class="empty-state">
+              <strong>Seleccioná un contacto</strong>
+              <span>Acá vas a ver datos, mensaje, notas y accesos rápidos.</span>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <section class="view" id="new-contact-view">
+      <section class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Nueva consulta</h2>
+            <p>Registrá manualmente un lead o una consulta recibida por otro canal.</p>
+          </div>
+        </div>
+
+        <form id="contact-form" class="contact-form">
+          <div class="form-grid">
+            <label>
+              Nombre
+              <input name="name" type="text" placeholder="Nombre completo" required>
+            </label>
+            <label>
+              Empresa
+              <input name="company" type="text" placeholder="Empresa o sector">
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" placeholder="correo@empresa.com">
+            </label>
+            <label>
+              Teléfono
+              <input name="phone" type="tel" placeholder="5491130961544" required>
+            </label>
+            <label>
+              Origen
+              <select name="source">
+                <option>Web</option>
+                <option>WhatsApp</option>
+                <option>LinkedIn</option>
+                <option>Referido</option>
+                <option>Otro</option>
+              </select>
+            </label>
+            <label>
+              Estado
+              <select name="status">
+                <option value="nuevo">Nuevo</option>
+                <option value="contactado">Contactado</option>
+                <option value="seguimiento">En seguimiento</option>
+                <option value="presupuesto">Presupuesto</option>
+                <option value="cerrado">Cerrado</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Mensaje / necesidad
+            <textarea name="message" rows="5" placeholder="Detalle de la consulta" required></textarea>
+          </label>
+
+          <label>
+            Nota interna
+            <textarea name="note" rows="4" placeholder="Próximo paso, contexto o comentario interno"></textarea>
+          </label>
+
+          <button class="primary-button" type="submit">Guardar consulta</button>
+          <p class="form-status" id="save-status" role="status"></p>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
