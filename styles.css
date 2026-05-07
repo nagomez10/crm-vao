@@ -26,6 +26,49 @@ body {
   color: var(--text);
 }
 
+body:not(.is-authenticated) .sidebar,
+body:not(.is-authenticated) .app {
+  display: none;
+}
+
+body.is-authenticated .auth-screen {
+  display: none;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255, 244, 197, 0.05), rgba(216, 170, 71, 0.02)), var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.auth-card label {
+  display: grid;
+  gap: 8px;
+  color: var(--gold-light);
+  font-weight: 700;
+}
+
+.auth-card p {
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+.error-text {
+  color: var(--danger);
+}
+
 button,
 input,
 select,
@@ -124,6 +167,11 @@ textarea {
   align-items: center;
   gap: 18px;
   margin-bottom: 28px;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .eyebrow {

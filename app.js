@@ -1,8 +1,17 @@
-const STORAGE_KEY = 'vao-crm-contacts';
+const isConfigured = Boolean(
+  window.SUPABASE_URL &&
+  window.SUPABASE_ANON_KEY &&
+  !window.SUPABASE_URL.includes('PEGAR_ACA')
+);
+
+const db = isConfigured
+  ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+  : null;
 
 const state = {
-  contacts: loadContacts(),
-  selectedId: null
+  contacts: [],
+  selectedId: null,
+  session: null
 };
 
 const views = {
@@ -25,6 +34,9 @@ const statusLabels = {
   cerrado: 'Cerrado'
 };
 
+const loginForm = document.getElementById('login-form');
+const loginStatus = document.getElementById('login-status');
+const logoutButton = document.getElementById('logout');
 const form = document.getElementById('contact-form');
 const saveStatus = document.getElementById('save-status');
 const search = document.getElementById('search');
@@ -41,12 +53,11 @@ document.getElementById('open-new-contact').addEventListener('click', () => {
   showView('new-contact');
 });
 
-document.getElementById('seed-demo').addEventListener('click', () => {
+document.getElementById('seed-demo').addEventListener('click', async () => {
   if (state.contacts.length && !confirm('Esto agregará contactos de ejemplo. ¿Continuar?')) return;
 
-  state.contacts = [
+  const demoContacts = [
     {
-      id: crypto.randomUUID(),
       name: 'Mariana Perez',
       company: 'Laboratorio Sur',
       email: 'mariana@laboratoriosur.com',
@@ -54,11 +65,9 @@ document.getElementById('seed-demo').addEventListener('click', () => {
       source: 'Web',
       status: 'nuevo',
       message: 'Necesitamos asesoramiento para ISO/IEC 17025 y calibración de equipos.',
-      note: 'Enviar propuesta inicial esta semana.',
-      createdAt: new Date().toISOString()
+      note: 'Enviar propuesta inicial esta semana.'
     },
     {
-      id: crypto.randomUUID(),
       name: 'Diego Alvarez',
       company: 'Industrias Norte',
       email: 'diego@industriasnorte.com',
@@ -66,21 +75,59 @@ document.getElementById('seed-demo').addEventListener('click', () => {
       source: 'WhatsApp',
       status: 'seguimiento',
       message: 'Consulta por auditoría interna ISO 9001.',
-      note: 'Pidió llamada el viernes.',
-      createdAt: new Date(Date.now() - 86400000).toISOString()
+      note: 'Pidió llamada el viernes.'
     }
   ];
 
-  saveContacts();
-  render();
+  const { error } = await db.from('contacts').insert(demoContacts);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await loadContacts();
 });
 
-form.addEventListener('submit', event => {
+loginForm.addEventListener('submit', async event => {
+  event.preventDefault();
+
+  if (!db) {
+    loginStatus.textContent = 'Falta configurar Supabase en config.js.';
+    return;
+  }
+
+  const data = Object.fromEntries(new FormData(loginForm));
+  loginStatus.textContent = '';
+
+  const { data: authData, error } = await db.auth.signInWithPassword({
+    email: data.email,
+    password: data.password
+  });
+
+  if (error) {
+    loginStatus.textContent = 'No se pudo iniciar sesión. Revisá email y contraseña.';
+    return;
+  }
+
+  state.session = authData.session;
+  document.body.classList.add('is-authenticated');
+  loginForm.reset();
+  await loadContacts();
+});
+
+logoutButton.addEventListener('click', async () => {
+  await db.auth.signOut();
+  state.session = null;
+  state.contacts = [];
+  state.selectedId = null;
+  document.body.classList.remove('is-authenticated');
+});
+
+form.addEventListener('submit', async event => {
   event.preventDefault();
 
   const data = Object.fromEntries(new FormData(form));
   const contact = {
-    id: crypto.randomUUID(),
     name: data.name.trim(),
     company: data.company.trim(),
     email: data.email.trim(),
@@ -88,16 +135,26 @@ form.addEventListener('submit', event => {
     source: data.source,
     status: data.status,
     message: data.message.trim(),
-    note: data.note.trim(),
-    createdAt: new Date().toISOString()
+    note: data.note.trim()
   };
 
-  state.contacts.unshift(contact);
-  state.selectedId = contact.id;
-  saveContacts();
+  const { data: inserted, error } = await db
+    .from('contacts')
+    .insert(contact)
+    .select()
+    .single();
+
+  if (error) {
+    saveStatus.textContent = `No se pudo guardar: ${error.message}`;
+    saveStatus.classList.add('error-text');
+    return;
+  }
+
   form.reset();
   saveStatus.textContent = 'Consulta guardada correctamente.';
-  render();
+  saveStatus.classList.remove('error-text');
+  state.selectedId = inserted.id;
+  await loadContacts();
 
   setTimeout(() => {
     saveStatus.textContent = '';
@@ -107,6 +164,42 @@ form.addEventListener('submit', event => {
 
 search.addEventListener('input', renderContacts);
 statusFilter.addEventListener('change', renderContacts);
+
+async function boot() {
+  if (!db) {
+    loginStatus.textContent = 'Pegá tu SUPABASE_URL y SUPABASE_ANON_KEY en config.js.';
+    return;
+  }
+
+  const { data } = await db.auth.getSession();
+  state.session = data.session;
+
+  if (state.session) {
+    document.body.classList.add('is-authenticated');
+    await loadContacts();
+  }
+
+  db.auth.onAuthStateChange(async (_event, session) => {
+    state.session = session;
+    document.body.classList.toggle('is-authenticated', Boolean(session));
+    if (session) await loadContacts();
+  });
+}
+
+async function loadContacts() {
+  const { data, error } = await db
+    .from('contacts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    alert(`Error cargando contactos: ${error.message}`);
+    return;
+  }
+
+  state.contacts = data.map(fromDatabase);
+  render();
+}
 
 function showView(viewName) {
   Object.entries(views).forEach(([name, view]) => {
@@ -245,36 +338,56 @@ function renderDetail() {
     <textarea id="detail-note" rows="5">${escapeHTML(contact.note || '')}</textarea>
   `;
 
-  document.getElementById('detail-status').addEventListener('change', event => {
-    contact.status = event.target.value;
-    saveContacts();
-    render();
+  document.getElementById('detail-status').addEventListener('change', async event => {
+    const { error } = await db
+      .from('contacts')
+      .update({ status: event.target.value, updated_at: new Date().toISOString() })
+      .eq('id', contact.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadContacts();
   });
 
-  document.getElementById('detail-note').addEventListener('input', event => {
-    contact.note = event.target.value;
-    saveContacts();
+  document.getElementById('detail-note').addEventListener('change', async event => {
+    const { error } = await db
+      .from('contacts')
+      .update({ note: event.target.value, updated_at: new Date().toISOString() })
+      .eq('id', contact.id);
+
+    if (error) alert(error.message);
   });
 
-  document.getElementById('delete-contact').addEventListener('click', () => {
+  document.getElementById('delete-contact').addEventListener('click', async () => {
     if (!confirm('¿Eliminar este contacto?')) return;
-    state.contacts = state.contacts.filter(item => item.id !== contact.id);
+
+    const { error } = await db.from('contacts').delete().eq('id', contact.id);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     state.selectedId = null;
-    saveContacts();
-    render();
+    await loadContacts();
   });
 }
 
-function loadContacts() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function saveContacts() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.contacts));
+function fromDatabase(contact) {
+  return {
+    id: contact.id,
+    name: contact.name,
+    company: contact.company,
+    email: contact.email,
+    phone: contact.phone,
+    source: contact.source,
+    status: contact.status,
+    message: contact.message,
+    note: contact.note,
+    createdAt: contact.created_at
+  };
 }
 
 function countByStatus(status) {
@@ -313,4 +426,4 @@ function escapeHTML(value = '') {
 
 const initialView = location.hash.replace('#', '') || 'dashboard';
 showView(views[initialView] ? initialView : 'dashboard');
-render();
+boot();

@@ -14,6 +14,27 @@
 </head>
 
 <body>
+  <section class="auth-screen" id="auth-screen">
+    <form class="auth-card" id="login-form">
+      <span class="brand-mark">V</span>
+      <div>
+        <p class="eyebrow">Acceso privado</p>
+        <h1>VAO CRM</h1>
+        <p>Ingresa con el usuario autorizado para gestionar contactos y consultas.</p>
+      </div>
+      <label>
+        Email
+        <input name="email" type="email" autocomplete="email" required>
+      </label>
+      <label>
+        Contrasena
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="primary-button" type="submit">Ingresar</button>
+      <p class="form-status error-text" id="login-status" role="status"></p>
+    </form>
+  </section>
+
   <aside class="sidebar">
     <a class="brand" href="#dashboard" aria-label="VAO CRM">
       <span class="brand-mark">V</span>
@@ -31,7 +52,7 @@
 
     <div class="sidebar-note">
       <strong>Versión inicial</strong>
-      <span>Los datos se guardan en este navegador. Luego lo conectamos a Supabase.</span>
+      <span>Datos protegidos con Supabase Auth y guardados en la nube.</span>
     </div>
   </aside>
 
@@ -41,7 +62,10 @@
         <p class="eyebrow">CRM interno</p>
         <h1 id="view-title">Panel comercial</h1>
       </div>
-      <button class="primary-button" id="open-new-contact" type="button">Nueva consulta</button>
+      <div class="topbar-actions">
+        <button class="primary-button" id="open-new-contact" type="button">Nueva consulta</button>
+        <button class="ghost-button" id="logout" type="button">Salir</button>
+      </div>
     </header>
 
     <section class="view active" id="dashboard-view">
@@ -187,6 +211,8 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 
